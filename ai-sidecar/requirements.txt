@@ -1,0 +1,21 @@
+# ARIA AI Sidecar — Python dependencies
+# Pinned for reproducibility. Update with: pip-compile requirements.in
+
+# ── Web framework ─────────────────────────────────────────────
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+pydantic==2.7.1
+
+# ── LLM client ───────────────────────────────────────────────
+# openai SDK works with OpenAI, Azure, Ollama, Groq, Mistral
+# — just change LLM_BASE_URL env var
+openai==1.35.0
+
+# ── HTTP client (async, used for pushgateway) ─────────────────
+httpx==0.27.0
+
+# ── Observability ─────────────────────────────────────────────
+prometheus-client==0.20.0
+
+# ── Utilities ─────────────────────────────────────────────────
+python-dotenv==1.0.1     # load .env in dev

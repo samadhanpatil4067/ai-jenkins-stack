@@ -1,0 +1,36 @@
+# ── ARIA Stack — Prometheus Configuration ────────────────────
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'local'
+    stack:   'aria'
+
+# ── Alerting rules ────────────────────────────────────────────
+rule_files:
+  - "alerts/*.yml"
+
+# ── Scrape targets ────────────────────────────────────────────
+scrape_configs:
+
+  - job_name: 'jenkins'
+    static_configs:
+      - targets: ['jenkins:8080']
+    metrics_path: /prometheus
+    scrape_interval: 15s
+
+  - job_name: 'ai-sidecar'
+    static_configs:
+      - targets: ['ai-sidecar:8000']
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  - job_name: 'pushgateway'
+    honor_labels: true
+    static_configs:
+      - targets: ['pushgateway:9091']
+    scrape_interval: 15s
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

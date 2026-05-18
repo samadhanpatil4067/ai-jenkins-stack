@@ -1,0 +1,109 @@
+# ── ARIA Stack — Docker Compose ──────────────────────────────
+#
+# Jenkins is NOT here. You already have it at localhost:8080.
+# This file starts only the supporting services:
+#
+#   ai-sidecar    AI intelligence layer  →  http://localhost:8000/docs
+#   prometheus    Metrics scraping       →  http://localhost:9090
+#   pushgateway   Pipeline metrics sink  →  http://localhost:9091
+#   grafana       Dashboards             →  http://localhost:3000  (admin/admin)
+#
+# Usage:
+#   cp .env.example .env && nano .env
+#   docker compose up -d
+#   curl http://localhost:8000/health   # verify sidecar
+# ─────────────────────────────────────────────────────────────
+
+services:
+
+  # ── AI Sidecar ─────────────────────────────────────────────
+  ai-sidecar:
+    build:
+      context: ./ai-sidecar
+      dockerfile: Dockerfile
+    container_name: aria-sidecar
+    restart: unless-stopped
+    ports:
+      - "${AI_SIDECAR_PORT:-8000}:8000"
+    env_file: .env
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PROMETHEUS_PUSHGATEWAY: "http://pushgateway:9091"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+    networks:
+      - aria
+    extra_hosts:
+      # Lets the sidecar reach Jenkins on the host machine
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - pushgateway
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ── Prometheus ─────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: aria-prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.enable-admin-api
+      - --web.enable-lifecycle
+    networks:
+      - aria
+    extra_hosts:
+      # Scrapes Jenkins running on the host
+      - "host.docker.internal:host-gateway"
+
+  # ── Pushgateway ────────────────────────────────────────────
+  pushgateway:
+    image: prom/pushgateway:v1.9.0
+    container_name: aria-pushgateway
+    restart: unless-stopped
+    ports:
+      - "${PUSHGATEWAY_PORT:-9091}:9091"
+    networks:
+      - aria
+
+  # ── Grafana ────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: aria-grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER:     "${GRAFANA_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD:-admin}"
+      GF_PATHS_PROVISIONING:      /etc/grafana/provisioning
+      GF_INSTALL_PLUGINS:         grafana-clock-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - aria
+    depends_on:
+      - prometheus
+
+# ── Volumes ───────────────────────────────────────────────────
+volumes:
+  prometheus_data:
+  grafana_data:
+
+# ── Networks ──────────────────────────────────────────────────
+networks:
+  aria:
+    driver: bridge
+    name: aria-network
