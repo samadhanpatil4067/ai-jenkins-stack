@@ -1,0 +1,13 @@
+.env
+*.key
+cosign.key
+cosign.pub
+__pycache__/
+*.pyc
+.pytest_cache/
+test-results/
+coverage/
+reports/
+*.log
+node_modules/
+.DS_Store

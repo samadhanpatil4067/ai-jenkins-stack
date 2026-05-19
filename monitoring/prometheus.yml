@@ -1,4 +1,3 @@
-# ── ARIA Stack — Prometheus Configuration ────────────────────
 global:
   scrape_interval:     15s
   evaluation_interval: 15s
@@ -6,16 +5,11 @@ global:
     cluster: 'local'
     stack:   'aria'
 
-# ── Alerting rules ────────────────────────────────────────────
-rule_files:
-  - "alerts/*.yml"
-
-# ── Scrape targets ────────────────────────────────────────────
 scrape_configs:
-
+  # Jenkins on host machine (not Docker)
   - job_name: 'jenkins'
     static_configs:
-      - targets: ['jenkins:8080']
+      - targets: ['host.docker.internal:8080']
     metrics_path: /prometheus
     scrape_interval: 15s
 
